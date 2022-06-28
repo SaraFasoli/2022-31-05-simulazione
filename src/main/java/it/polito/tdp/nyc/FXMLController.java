@@ -5,8 +5,12 @@
 package it.polito.tdp.nyc;
 
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 import it.polito.tdp.nyc.model.Model;
+import it.polito.tdp.nyc.model.QuartiereAdiacente;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -15,6 +19,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 
 public class FXMLController {
 	
@@ -39,7 +44,7 @@ public class FXMLController {
     private ComboBox<String> cmbProvider; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbQuartiere"
-    private ComboBox<?> cmbQuartiere; // Value injected by FXMLLoader
+    private ComboBox<String> cmbQuartiere; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtMemoria"
     private TextField txtMemoria; // Value injected by FXMLLoader
@@ -48,26 +53,68 @@ public class FXMLController {
     private TextArea txtResult; // Value injected by FXMLLoader
     
     @FXML // fx:id="clQuartiere"
-    private TableColumn<?, ?> clQuartiere; // Value injected by FXMLLoader
+    private TableColumn<QuartiereAdiacente, String> clQuartiere; // Value injected by FXMLLoader
  
     @FXML // fx:id="clDistanza"
-    private TableColumn<?, ?> clDistanza; // Value injected by FXMLLoader
+    private TableColumn<QuartiereAdiacente, Double> clDistanza; // Value injected by FXMLLoader
     
     @FXML // fx:id="tblQuartieri"
-    private TableView<?> tblQuartieri; // Value injected by FXMLLoader
+    private TableView<QuartiereAdiacente> tblQuartieri; // Value injected by FXMLLoader
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
-    	
+    	txtResult.clear();
+    	String provider=cmbProvider.getValue();
+    	if(provider==null) {
+    		txtResult.appendText("Devi inserire un provider");
+    	}
+    	String s=model.creaGrafo(provider);
+    	cmbQuartiere.getItems().addAll(model.getQuartieri(provider));
+    	txtResult.appendText(s);
+
     }
 
     @FXML
     void doQuartieriAdiacenti(ActionEvent event) {
+    	txtResult.clear();
+    	String q=cmbQuartiere.getValue();
+    	if(q==null) {
+    		txtResult.appendText("Devi inserire un quartiere");
+    	}
     	
+    	List<QuartiereAdiacente> vicini=model.getVicini(q);
+    	tblQuartieri.setItems(FXCollections.observableArrayList(vicini));
+
     }
 
     @FXML
     void doSimula(ActionEvent event) {
+        txtResult.clear();
+    	
+    	String provider=cmbProvider.getValue();
+    	if(provider==null) {
+    		txtResult.appendText("Devi inserire un provider");
+    	}
+    	String qPartenza=cmbQuartiere.getValue();
+    	if(qPartenza==null) {
+    		txtResult.appendText("Devi inserire un quartiere");
+    	}
+    	String n=txtMemoria.getText();
+    	try {
+    		int ntecnici=Integer.parseInt(n);
+    		model.simula(ntecnici, provider, qPartenza);
+    		
+    		int durata=model.getDurataSimulazione();
+    		txtResult.appendText("Durata simulazione: "+durata+"\n");
+    		Map<Integer,Integer> HotspotTecnico=model.getHotspotPerTecnico();
+    		for(Integer i: HotspotTecnico.keySet()) {
+    			txtResult.appendText("Tecnico: "+i+" ");
+    			txtResult.appendText("hotspot-> "+HotspotTecnico.get(i)+"\n");
+    		}
+    		
+    	}catch(NumberFormatException e) {
+    		txtResult.appendText("Devi inserire un numero di tecnici");
+    	}
 
     }
 
@@ -83,10 +130,15 @@ public class FXMLController {
         assert clDistanza != null : "fx:id=\"clDistanza\" was not injected: check your FXML file 'Scene.fxml'.";
         assert clQuartiere != null : "fx:id=\"clQuartiere\" was not injected: check your FXML file 'Scene.fxml'.";
 
+        clQuartiere.setCellValueFactory(new PropertyValueFactory<QuartiereAdiacente, String>("vicino"));
+		clDistanza.setCellValueFactory(new PropertyValueFactory<QuartiereAdiacente, Double>("distanza"));
+
     }
     
     public void setModel(Model model) {
     	this.model = model;
+    	
+    	cmbProvider.getItems().addAll(model.getProvider());
     }
 
 }
